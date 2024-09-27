@@ -126,30 +126,30 @@ jobs:
                 tag: ${{ matrix.version }}
 
   benchmark-test:
-  if: ${{ success() }}
-  runs-on: ubuntu-latest
-  name: Performance benchmark test
-  needs: [ list-version, deploy ]
-  timeout-minutes: 60
-  steps:
-    - uses: chi3316/rocketmq-test-tool/benchmark-runner@89d3abde74cac994f9a9b3c45bf6ed3096cdc7ea
-      name: Performance benchmark
-      with:
-        action: "performance-benchmark"
-        ask-config: "${{ env.SECRET }}"
-        job-id: 1
-        test-time: "300"
-    - name: Upload test report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-report
-        path: benchmark/
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    name: Performance benchmark test
+    needs: [ list-version, deploy ]
+    timeout-minutes: 60
+    steps:
+      - uses: chi3316/rocketmq-test-tool/benchmark-runner@89d3abde74cac994f9a9b3c45bf6ed3096cdc7ea
+        name: Performance benchmark
+        with:
+          action: "performance-benchmark"
+          ask-config: "${{ env.SECRET }}"
+          job-id: 1
+          test-time: "300"
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: benchmark/
 
   clean:
     if: always()
     name: Clean
-    needs: [list-version,benchmark-test]
+    needs: [list-version, benchmark-test]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
