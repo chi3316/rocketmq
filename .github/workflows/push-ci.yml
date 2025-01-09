@@ -2,7 +2,7 @@ name: PUSH-CI
 
 on:
   push:
-    branches: [master, develop, fix-benchmark-e2e-dependency]
+    branches: [master, develop, fix-benchmark-pipeline-os-version]
   #schedule:
   #  - cron: "0 18 * * *" # TimeZone: UTC 0
 
@@ -283,6 +283,7 @@ jobs:
 
   benchmark-test:
     if: ${{ success() }}
+    # ubuntu-22.04
     runs-on: ubuntu-latest
     name: Performance benchmark test
     needs: [ list-version, deploy-benchmark ]
