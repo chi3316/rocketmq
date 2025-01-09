@@ -2,7 +2,7 @@ name: PUSH-CI
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, fix-benchmark-pipeline-os-version]
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
@@ -83,7 +83,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        version: ["fix-benchmark-e2e-dependency-5f64a9ae-157d-40c0-9c6f-638fc2ee6fb7-ubuntu"]
+        version: ["fix-benchmark-pipeline-os-version-4df03f1e-5b81-4290-bdb9-377d5ce03424-ubuntu"]
     steps:
       - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: clean
