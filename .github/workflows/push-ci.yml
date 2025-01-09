@@ -2,7 +2,7 @@ name: PUSH-CI
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, fix-benchmark-pipeline-os-version]
   #schedule:
   #  - cron: "0 18 * * *" # TimeZone: UTC 0
 
@@ -139,7 +139,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
+        version: ["old-version-code-9b5b4d91-5587-4ff4-831d-32267c9850a0-ubuntu"]
     steps:
       - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: Deploy rocketmq
@@ -336,7 +336,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
+        version: ["old-version-code-9b5b4d91-5587-4ff4-831d-32267c9850a0-ubuntu"]
     steps:
       - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: clean
