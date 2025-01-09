@@ -1,0 +1,64 @@
+name: PUSH-CI
+
+on:
+  push:
+    branches: [master, develop, old-version-code]
+
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
+  DOCKER_REPO: registry.cn-guangzhou.aliyuncs.com/cc-aliyun/rocketmq-ci
+
+jobs:
+  dist-tar:
+    name: Build dist tar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "8"
+          cache: "maven"
+      - name: Build distribution tar
+        run: |
+          mvn -Prelease-all -DskipTests -Dspotbugs.skip=true clean install -U
+      - uses: actions/upload-artifact@v4
+        name: Upload distribution tar
+        with:
+          name: rocketmq
+          path: distribution/target/rocketmq*/rocketmq*
+  docker:
+    if: ${{ success() }}
+    name: Docker images
+    needs: [dist-tar]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        base-image: ["ubuntu"]
+        java-version: ["8"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: apache/rocketmq-docker.git
+          ref: master
+          path: rocketmq-docker
+      - uses: actions/download-artifact@v4
+        name: Download distribution tar
+        with:
+          name: rocketmq
+          path: rocketmq
+      - name: docker-login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login registry.cn-guangzhou.aliyuncs.com --username=aliyun3982714546 --password-stdin
+
+      - name: Build and save docker images
+        id: build-images
+        run: |
+          cd rocketmq-docker/image-build-ci
+          version=${{ github.event.pull_request.number || github.ref_name }}-$(uuidgen)
+          mkdir versionlist
+          touch versionlist/"${version}-`echo ${{ matrix.base-image }} | sed -e "s/:/-/g"`"
+          sh ./build-image-local.sh ${version} ${{ matrix.base-image }} ${{ matrix.java-version }} ${DOCKER_REPO}
