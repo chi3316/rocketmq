@@ -12,7 +12,6 @@ jobs:
   deploy-benchmark:
     if: ${{ success() }}
     name: Deploy RocketMQ For Benchmarking
-    needs: [list-version,docker]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -52,7 +51,7 @@ jobs:
     # ubuntu-22.04
     runs-on: ubuntu-latest
     name: Performance benchmark test
-    needs: [ list-version, deploy-benchmark ]
+    needs: [ deploy-benchmark ]
     timeout-minutes: 60
     steps:
       - uses: chi3316/rocketmq-test-tool/benchmark-runner@39cba2235ce88a56c0cf4031648745f23e356e45
@@ -79,7 +78,7 @@ jobs:
   clean-benchmark:
     if: always()
     name: Clean Benchmarking
-    needs: [list-version, benchmark-test ]
+    needs: [ benchmark-test ]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
