@@ -2,20 +2,19 @@ name: PUSH-CI
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, old-version-code]
   #schedule:
   #  - cron: "0 18 * * *" # TimeZone: UTC 0
 
-concurrency:
-  group: rocketmq-${{ github.ref }}
+#concurrency:
+#  group: rocketmq-${{ github.ref }}
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
-  DOCKER_REPO: apache/rocketmq-ci
+  DOCKER_REPO: registry.cn-guangzhou.aliyuncs.com/cc-aliyun/rocketmq-ci
 
 jobs:
   dist-tar:
-    if: github.repository == 'apache/rocketmq'
     name: Build dist tar
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -59,11 +58,7 @@ jobs:
           name: rocketmq
           path: rocketmq
       - name: docker-login
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login registry.cn-guangzhou.aliyuncs.com --username=aliyun3982714546 --password-stdin
       - name: Build and save docker images
         id: build-images
         run: |
@@ -80,7 +75,6 @@ jobs:
 
   list-version:
     if: >
-      github.repository == 'apache/rocketmq' && 
       always()
     name: List version
     needs: [docker]
@@ -96,11 +90,10 @@ jobs:
           path: versionlist
       - name: Show versions
         id: show_versions
-        run: | 
+        run: |
           a=(`ls versionlist`)
           printf '%s\n' "${a[@]}" | jq -R . | jq -s .
           echo version-json=`printf '%s\n' "${a[@]}" | jq -R . | jq -s .` >> $GITHUB_OUTPUT
-
   deploy-e2e:
     if: ${{ success() }}
     name: Deploy RocketMQ For E2E
@@ -111,13 +104,13 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: Deploy rocketmq
         with:
           action: "deploy"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
-          chart-git: "https://ghproxy.com/https://github.com/apache/rocketmq-docker.git"
+          chart-git: "https://github.com/apache/rocketmq-docker.git"
           chart-branch: "master"
           chart-path: "./rocketmq-k8s-helm"
           job-id: ${{ strategy.job-index }}
@@ -134,7 +127,10 @@ jobs:
               image:
                 repository: ${{env.DOCKER_REPO}}
                 tag: ${{ matrix.version }}
-
+            controller:
+              image:
+                repository: ${{env.DOCKER_REPO}}
+                tag: ${{ matrix.version }}
   deploy-benchmark:
     if: ${{ success() }}
     name: Deploy RocketMQ For Benchmarking
@@ -145,13 +141,13 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: Deploy rocketmq
         with:
           action: "deploy"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
-          chart-git: "https://ghproxy.com/https://github.com/apache/rocketmq-docker.git"
+          chart-git: "https://github.com/apache/rocketmq-docker.git"
           chart-branch: "master"
           chart-path: "./rocketmq-k8s-helm"
           job-id: "001-${{ strategy.job-index }}"
@@ -168,7 +164,10 @@ jobs:
               image:
                 repository: ${{env.DOCKER_REPO}}
                 tag: ${{ matrix.version }}
-
+            controller:
+               image:
+                repository: ${{env.DOCKER_REPO}}
+                tag: ${{ matrix.version }}
   test-e2e-grpc-java:
     if: ${{ success() }}
     name: Test E2E grpc java
@@ -179,13 +178,13 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: e2e test
         with:
           action: "test"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
-          test-code-git: "https://ghproxy.com/https://github.com/apache/rocketmq-e2e"
+          test-code-git: "https://github.com/apache/rocketmq-e2e"
           test-code-branch: "master"
           test-code-path: java/e2e
           test-cmd: "mvn -B test"
@@ -204,7 +203,7 @@ jobs:
         with:
           name: test-e2e-grpc-java-log.txt
           path: testlog.txt
-          
+
   test-e2e-golang:
     if: ${{ success() }}
     name: Test E2E golang
@@ -215,21 +214,20 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: e2e test
         with:
           action: "test"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
-          test-code-git: "https://ghproxy.com/https://github.com/apache/rocketmq-e2e"
+          test-code-git: "https://github.com/apache/rocketmq-e2e"
           test-code-branch: "master"
           test-code-path: golang
           test-cmd: |
             cd ../common &&  mvn -Prelease -DskipTests clean package -U
             cd ../rocketmq-admintools && source bin/env.sh
-            LATEST_GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1')
-            wget "https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz" && \
-            rm -rf /usr/local/go && tar -C /usr/local -xzf ${LATEST_GO_VERSION}.linux-amd64.tar.gz
+            wget https://go.dev/dl/go1.22.6.linux-amd64.tar.gz && \
+            rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.6.linux-amd64.tar.gz
             cd ../golang && go get -u github.com/apache/rocketmq-clients/golang && gotestsum --junitfile ./target/surefire-reports/TEST-report.xml ./mqgotest/... -timeout 2m  -v
           job-id: 0
       - name: Publish Test Report
@@ -246,7 +244,7 @@ jobs:
         with:
           name: test-e2e-golang-log.txt
           path: testlog.txt
-          
+
   test-e2e-remoting-java:
     if: ${{ success() }}
     name: Test E2E remoting java
@@ -257,13 +255,13 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: e2e test
         with:
           action: "test"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
-          test-code-git: "https://ghproxy.com/https://github.com/apache/rocketmq-e2e"
+          test-code-git: "https://github.com/apache/rocketmq-e2e"
           test-code-branch: "master"
           test-code-path: java/e2e-v4
           test-cmd: "mvn -B test"
@@ -290,7 +288,7 @@ jobs:
     needs: [ list-version, deploy-benchmark ]
     timeout-minutes: 60
     steps:
-      - uses: apache/rocketmq-test-tool/benchmark-runner@ce372e5f3906ca1891e4918b05be14608eae608e
+      - uses: chi3316/rocketmq-test-tool/benchmark-runner@39cba2235ce88a56c0cf4031648745f23e356e45
         name: Performance benchmark
         with:
           action: "performance-benchmark"
@@ -302,7 +300,7 @@ jobs:
           min-send-tps-threshold: "12000"
           max-rt-ms-threshold: "500"
           avg-rt-ms-threshold: "10"
-          max-2c-rt-ms-threshold: "150"
+          max-2c-rt-ms-threshold: "100"
           avg-2c-rt-ms-threshold: "10"
       - name: Upload test report
         if: always()
@@ -321,25 +319,25 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: clean
         with:
           action: "clean"
           ask-config: "${{ secrets.ASK_CONFIG_VIRGINA }}"
           test-version: "${{ matrix.version }}"
           job-id: ${{ strategy.job-index }}
-          
+
   clean-benchmark:
     if: always()
     name: Clean Benchmarking
-    needs: [ list-version, benchmark-test ]
+    needs: [list-version, benchmark-test ]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       matrix:
         version: ${{ fromJSON(needs.list-version.outputs.version-json) }}
     steps:
-      - uses: apache/rocketmq-test-tool@7d84d276ad7755b1dc5cf9657a7a9bff6ae6d288
+      - uses: chi3316/rocketmq-test-tool@44a9a6239a5f3f194fe918accd5a41662d9fc5d1
         name: clean
         with:
           action: "clean"
