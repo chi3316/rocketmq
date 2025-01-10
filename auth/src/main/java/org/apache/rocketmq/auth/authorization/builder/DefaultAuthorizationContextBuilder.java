@@ -182,13 +182,8 @@ public class DefaultAuthorizationContextBuilder implements AuthorizationContextB
             Resource group;
             switch (command.getCode()) {
                 case RequestCode.GET_ROUTEINFO_BY_TOPIC:
-                    if (NamespaceUtil.isRetryTopic(fields.get(TOPIC))) {
-                        group = Resource.ofGroup(fields.get(TOPIC));
-                        result.add(DefaultAuthorizationContext.of(subject, group, Arrays.asList(Action.SUB, Action.GET), sourceIp));
-                    } else {
-                        topic = Resource.ofTopic(fields.get(TOPIC));
-                        result.add(DefaultAuthorizationContext.of(subject, topic, Arrays.asList(Action.PUB, Action.SUB, Action.GET), sourceIp));
-                    }
+                    topic = Resource.ofTopic(fields.get(TOPIC));
+                    result.add(DefaultAuthorizationContext.of(subject, topic, Arrays.asList(Action.PUB, Action.SUB, Action.GET), sourceIp));
                     break;
                 case RequestCode.SEND_MESSAGE:
                     if (NamespaceUtil.isRetryTopic(fields.get(TOPIC))) {
